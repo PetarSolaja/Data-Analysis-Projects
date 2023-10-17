@@ -1,0 +1,649 @@
+---
+title: "Predicting the 2023 Canadian Federal Election Using Bayesian Logistic Regression with Post-stratification"
+author: "Group 7: Ju-Eun Kim, Fernando Sanchez-Avila, Petar Solaja, Kate Tong"
+date: May 28, 2021
+subtitle: STA304 - Assignment 2
+output:
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+library(openintro)
+library(tidyverse)
+library(dplyr)
+library(reshape2)
+```
+
+
+```{r, include = FALSE}
+census_data <- read_csv("gss_clean.csv")
+survey_data <- read_csv("data_selected.csv")
+```
+
+
+## Introduction
+
+### Background
+
+There are a variety of methods one may use to predict election outcomes, ranging from polls, surveys, to different types of quantitative models. Election surveys are usually conducted close to the time of an election to obtain the highest degree of prediction accuracy. However, we may still be interested in predicting an upcoming election months before election surveys are even conducted. In that case, we may use quantitative models to predict an upcoming election based on data obtained from past election surveys and from census data. Such is the interest of this report. In this report, we aim to predict the overall popular vote of the 2023 Canadian federal election using Bayesian logistic regression models with post-stratification, based on survey data from the 2019 Canadian Election Study (CES) and census data from the General Social Survey (GSS). We built our regression model using the response variable ‘vote choice,’ and six predictor variables, including the year of birth, gender, province, education level, income, and religion of the survey respondents in CES 2019. Our model predicts the probability of a given person voting for the Liberal Party or Conservative Party depending on their age, gender, province, education level, income and religion. The subgroups in our survey sample are then post-stratified using census data from the GSS, which serves as the ‘truth benchmark’ for demographic characteristics of the Canadian population to correct for differences between the sample and the target population.
+
+The key concept used in this report is the technique of post-stratification. Post-stratification is a post-survey reweighing technique used to correct for bias. Often, despite our best efforts, there will still be bias in our sample. For example, since the CES 2019 data, we obtained for our analysis is data from an online survey, it is possible that the younger population is oversampled and the older population undersampled, as the older generation does not use the internet as often as the younger generation does. In this case, we may use post-stratification to adjust the weights of undersampled and oversampled subgroups, so our sample is more representative of the true distributions in the target population. An example of post-stratification being used to correct for extreme differences between distributions in the sample and the target population is the paper by Wang et al. (2015) entitled “Forecasting elections with non-representative polls”. In their paper, Wang et al. created an election forecast using daily voter intention polls conducted on the Xbox gaming platform for the 2012 US presidential election and adjusted responses with multilevel regression and post-stratification. With this method, they were able to obtain estimates that are in line with forecasts from leading poll analysts, which were based on aggregating hundreds of traditional voter polls. Evidently, the technique of post-stratification could be a low-cost-high-benefit way of predicting an election and potentially a broad range of other issues.
+
+### Relevance
+
+This type of analysis serves many important purposes. Firstly, it provides information to politicians and political activists about a likely election outcome based on current demographics, allowing them to evaluate policy initiatives and make adjustments they feel necessary to their campaigns in order to target key demographics. Secondly, much is learned about what causes election outcomes in democratic polities as a whole as we learn about how different parameters, i.e. year of birth, gender, province, education level, income, and religion, influence the probability of a person voting for one political party over another. Finally, models predicting election outcomes satisfy our curiosity as citizens. Most of us, as citizens, want to know who is going to win in the next election and how voters belonging to different demographics tend to vote. These are pieces of information that help facilitate political discourse and are intrinsically interesting in any healthy democracy.
+
+### Terminology
+
+A political terminology used in the Results section is the notion of electoral districts in Canada, also known as ridings. Every province of Canada is divided into geographic areas called electoral districts to provide their population with representation in Canada's legislative body. Each electoral district is represented by a seat in the House of Commons. In elections, voters registered in a particular voting district can only vote for candidates running for office in that district, and whichever party wins in a specific electoral district will win a seat in the House of Commons. The electoral quotient is the average population per electoral district. Each province's electoral quotient is calculated by dividing the province's total population by the number of seats allocated. With 121 seats, Ontario has an electoral quotient of 111,144, while Prince Edward Island has the lowest electoral quotient of 35,726. ("House of Commons of Canada", 2021)
+
+### Hypothesis
+
+We hypothesize that the Liberal Party has a greater probability of winning the 2023 Canadian federal election due to a vast majority of opinion polls conducted by different polling firms for the 2023 Canadian federal election indicating that the Liberal Party is leading (“Opinion polling for the 44th Canadian federal election,” 2021). In fact, all of the opinion polls conducted after October 2020 indicate that the Liberal Party is in the lead. Therefore, it is reasonable to hypothesize that the Liberal Party will win the 2023 Canadian federal election.
+
+
+## Data
+
+### Data Cleaning Process
+
+The survey data was collected from Harvard Dataverse. The raw data was collected and will be cleaned throughout this section. It contains information about the 2019 Canadian Election Study done via the online survey. The survey included information about the attitudes of Canadians during and after the 2019 election (Stephenson et al., 2020). The data will be used to make the appropriate model to predict the election of the 2023 Canadian Election.
+
+The census data was collected from Computing in the Humanities and Social Sciences (CHASS), the U of T library. CHASS allowed access to the General Social Survey (GSS) data obtained in 2017. The row data was downloaded into the CSV. File and cleaned using the `gss_cleaning.R` code to make the data more practical for analysis. Further cleaning will be done in this section, and the data will be further analyzed both numerically and visually.
+
+First, both the survey and the census data will be cleaned by removing the irrelevant information. Both datasets contain lots of information that are unnecessary for the analysis. Therefore, the unnecessary columns will be deleted for efficient analysis. The selected columns will be only used for the entire study. The process is done using the `select` function in the `tidyverse` package.
+```{r, include = FALSE}
+survey_data <- survey_data %>% select(`cps19_yob`, `cps19_gender`, `cps19_province`, `cps19_education`, `cps19_votechoice`, `cps19_income_number`, `cps19_religion`)
+
+census_data <- census_data %>% select(`age`, `sex`, `province`, `education`, `income_respondent`, `religion_has_affiliation`)
+```
+Both dataset, they have the common or similar columns. The column related to age or the year of birth, gender/sex, province, income, and religion are common to both variables except for the `cps19_votechoice`, which will be the output of the predicting variable. Having similar variables, it will make the result easier to interpret.
+
+Next, there were answers that many people did not remember or backed out from answering each question about in the survey. They will be removed while not answering the questions may be biased due to unclear explanation of each variable. However, it is possible that eliminating some answers may also cause bias. When one of the answers is missing from observation, the entire row will be deleted to minimize the non-response bias. That way, the cases observed for all questions will be only analyzed. This step applies to both datasets.
+```{r, include = FALSE}
+survey_data <- survey_data %>% drop_na()
+
+census_data <- census_data %>% drop_na()
+```
+
+After the cleaning process, the remaining columns and rows from both datasets are essential for the complete analysis.
+
+For the model building, the survey data will be introduced for the "Key Variable Section."
+
+### Key Variables of Survey Data
+
+#### Dependent Variable
+
+Firstly, the `cps19_votechoice` is the critical respondent, which is also called the dependent variable for the objective of the analysis. The `cps19_votechoice` is the collection of responses from the question, "Which party do you think you will vote for?" which is the categorical variable (Stephenson et al., 2020). It is directly related to the main objective of the analysis. Using the `survey_data`, the final goal is to build the predicting model for the 2023 Canadian Election. The model will include various independent variables; the dependent variable will be shown as the output. Therefore, the dependent variable will be examined how it changes or gets influenced due to all other factors. 
+
+#### Independent Variables
+
+The independent, predictor variables are: `cps19_yob`, `cps19_gender`, `cps19_province`, `cps19_education`, `cps19_votechoice`, `cps19_income_number`, `cps19_religion`.
+
+The variable `cps19_yob` is crucial because it determines the age of the voter, which is a numerical variable. Even though the result represents the year of birth, it indirectly indicates the age of the survey participant. Specific age groups may tend to prefer one party over the others because of their growing environment or from their experience. People tend to vote from previous experience with certain parties. Younger people and seniors may find different ideas for voting due to their expertise. Also, the younger people who do not have lots of interest about the politic will have other thoughts on the party compared to seniors. Also, if that is the case, the proportion of the participation matters. According to Elections Canada, the participation of voters aged 18 to 24 decreased by 3.2 percentage points to 53.9% in 2019 (Elections Canada, 2020). The age group between 35 to 44 saw the highest increase in voter turnout, with a rise of 2.7 percentage points to 64.6% (Elections Canada, 2020). Lastly, the voters aged 65 to 74 had the highest participation rate of 79.1% (Elections Canada, 2020). Therefore, it would be essential to investigate the relationship between the choice of the vote and the participant's year of birth regarding the age distribution of the participants.
+
+The `cps19_gender` is also an essential variable to consider. It is a categorical variable. According to new Ipsos, there was a significant division between men's political leanings and women under 55 (Breen, 2019). For instance, the analysis resulted that women tended to lean towards the Conservative Party as they age (Breen, 2019). Therefore, gender and age are the key variables that influence the result of the election. Also, gender and age groups play a role together. For example, the two people in the same particular age group, men and women, will give very different results. Thus, gender and age are highly related to each other that need to be analyzed together. 
+
+The variable `cps19_province` is a categorical variable that will divide individuals into different regions. The response is collected from the question asking which province or territory the participant is currently living in (Stephenson et al., 2020). It will show how the vote result differs by region using a logistic regression model. In Canada, each province has a provincial government. People may be influenced by the experience with a specific party that can adjust the federal government's election result. 
+
+The `cps19_education` is a categorical variable that may influence the voting choice. It demonstrates the highest level of education that the survey participants have completed (Stephenson et al., 2020). People who have learned more about politics may lean to a particular party based on the parties' election pledge. People who are more familiar with politics and never studied politics and civics may have different perspectives. The interpretation of the evaluation of the previous party will be different, which may directly result in the difference in voting results. 
+
+The `cps19_income_number` shows the total household income before taxes for 2018 (Stephenson et al., 2020). It is a numerical variable that the income may show differences in party affiliation due to fiscal policies. People may prefer the federal government to collect less tax. On the other hand, some may like the federal government that provides more financial support, such as "CESB" or "CERB" during the financial emergency. The factor of income may make people lean towards a specific party for their own benefit.
+
+Lastly, `cps19_religion` is a categorical variable that has a subtler influence in Canadian politics. It is because of the various laws that are based on religion. The most common two factors are same-sex marriage and abortion (CBC, 2019). People with strong religious affiliation may be motivated by their faith (CBC, 2019). For instance, the Roman Catholic church prohibits abortion because it is considered a sin (Schenker & Rabenou, 1993). As a result, people who do not believe in the Roman Catholic church and supports abortion are not likely to choose the party that does not allow abortion. However, people who believe in the Roman Catholic church will instead pick the party that supports their belief. Therefore, having religion may influence have the result of the election. 
+
+
+### Numerical Summary
+
+The numerical summary will be done on the age of the survey participant. It will give age distribution about the survey participant. It will provide what age group of people have participated in the election the most. The distribution of ages is vital while different generations may support other parties.
+
+However, the number recorded is irrelevant while it recorded the birth year using the assigned number. For example, 1 indicates the people born in 1970, and 91 shows the people born in 2010. Therefore, to get the information of age, the data will be manipulated first.
+
+The survey was conducted in 2019. Therefore, the benchmark age will be in 2019.  
+
+```{r, include=FALSE}
+survey_word <- survey_data
+
+survey_word$cps19_age <- -1 * survey_word$cps19_yob + 99
+
+```
+
+```{r echo=FALSE}
+sum_table<-summarise(survey_word, mean = mean(cps19_age), median = median(cps19_age), sd = sd(cps19_age), min = min(cps19_age), max = max(cps19_age))
+knitr::kable(sum_table, "latex")
+```
+
+The mean and median age of the voting participants in 2019 was almost similar. It indicates the proportion of the age distribution is most likely not right or left-skewed. The maximum age who participated in the survey was 98, and the minimum age was 17. The standard deviation was quite significant, which is 16.010, that the age distribution is prominent from the mean.
+
+### Visualization
+
+First, the `cps19_votechoice` in each region will be analyzed using the `survey_data`. The bar graph will be done but will be divided based on the province information, `cps19_province`.  
+
+The data is collected using the numbers. For instance, `14` represents Alberta, `15` represents British Columbia, and `16` represents Manitoba (Stephenson et al., 2020). The same applies to the vote choice for a party. For example, `1` represents the Liberal Party, and `2` illustrates the Conservative Party (Stephenson et al., 2020). Therefore, the data will be manipulated to make it easier for interpretation. Then, the graph will be plotted. 
+
+```{r, include=FALSE}
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 1] <- 'Liberal Party'
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 2] <- 'Conservative Party'
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 3] <- 'NDP'
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 4] <- 'Bloc Québécois'
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 5] <- 'Green Party'
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 6] <- "People's Party"
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 7] <- "Another party"
+survey_word$cps19_votechoice[survey_word$cps19_votechoice == 9] <- "Don't know/ Prefer not to answer"
+
+survey_word$cps19_province[survey_word$cps19_province == 14] <- 'Alberta'
+survey_word$cps19_province[survey_word$cps19_province == 15] <- 'British Columbia'
+survey_word$cps19_province[survey_word$cps19_province == 16] <- 'Manitoba'
+survey_word$cps19_province[survey_word$cps19_province == 17] <- 'New Brunswick'
+survey_word$cps19_province[survey_word$cps19_province == 18] <- 'Newfoundland and Labrador'
+survey_word$cps19_province[survey_word$cps19_province == 19] <- 'Northwest Territories'
+survey_word$cps19_province[survey_word$cps19_province == 20] <- 'Nova Scotia'
+survey_word$cps19_province[survey_word$cps19_province == 21] <- 'Nunavut'
+survey_word$cps19_province[survey_word$cps19_province == 22] <- 'Ontario'
+survey_word$cps19_province[survey_word$cps19_province == 23] <- 'Prince Edward Island'
+survey_word$cps19_province[survey_word$cps19_province == 24] <- 'Quebec'
+survey_word$cps19_province[survey_word$cps19_province == 25] <- 'Saskatchewan'
+survey_word$cps19_province[survey_word$cps19_province == 26] <- 'Yukon'
+```
+
+```{r fig.height=20, fig.width=20, echo = FALSE }
+ggplot(survey_word,aes(x = cps19_votechoice)) + 
+  geom_bar() + 
+  theme(axis.text.x = element_text(angle=90, hjust=1), text = element_text(size=15)) +
+  facet_wrap(~cps19_province, scales = "free") +
+  scale_y_continuous(name="Count") + 
+  xlab("Party Choice of Individuals")+
+  theme(strip.background =element_rect(fill="black"), strip.text = element_text(colour = 'white', size = 15)) +
+  ggtitle("Voting Result of Individuals in Each Province")
+```
+
+The graph demonstrated the choice of Party in each region. From the graphs, it is recognizable that each province support one or two particular parties. For example, the survey participants in Alberta tended to support Conservative Party in the most significant landslide. People who support Conservative Party in Alberta were more than half. On the other hand, provinces like British Columbia had the two most supportive parties Conservative and Liberal. Almost a similar proportion of people supported each Party. However, Yukon's survey result was different from the other provinces in that the people distribution rate was not as high. The most supporting Party and the least supporting Party's difference was not as high. Most of the provinces tended to support the Liberal or Conservative Party. However, only one region, Yukon, supported NDP the most.
+
+The following graph will indicate the relationship between `cps19_income_number` and the `cps19_votechoice`. It will demonstrate how income influences the voting result without considering the other factors.
+
+```{r, echo = FALSE}
+ggplot(survey_word, aes(x=cps19_votechoice, y=cps19_income_number, group=cps19_votechoice)) + 
+  geom_boxplot(aes(fill=cps19_votechoice)) +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  xlab("Party Choice of Individuals") +
+  ylab("Total House Income") +
+  ggtitle("Income Level on Supporting Party")
+```
+
+The graph above indicates the income level. However, it is clear that there is an extreme outlier. Due to the outlier, the result is not clear to see the distribution. Therefore, the outlier will be removed. A new graph will be generated below with the outlier.
+
+All the outliers were removed before generating a new graph. It may include the points that were not shown in the previous graph visually. In total, 744 points were considered as outliers out of 21762 data points.
+```{r, include=FALSE}
+boxplot(survey_word$cps19_income_number, plot=FALSE)$out
+outliers <- boxplot(survey_word$cps19_income_number, plot=FALSE)$out
+survey_noutlier <- survey_word[-which(survey_word$cps19_income_number %in% outliers),]
+```
+
+```{r fig.height=10, fig.width=10, echo = FALSE}
+ggplot(survey_noutlier, aes(x=cps19_votechoice, y=cps19_income_number, group=cps19_votechoice)) + 
+  geom_boxplot(aes(fill=cps19_votechoice)) +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  xlab("Party Choice of Individuals") +
+  ylab("Total House Income")+
+  ggtitle("Income Level on Supporting Party")
+```
+
+The boxplot indicates the total annual income in each household and the party choice of individuals using the new dataset without the outlier. The x-axis demonstrates the party choice of individuals. Then, the y-axis represents the total annual income in CAD. The bold middle line indicates the median value of the participants in each group. The median line was shown at a similar level in the boxplot. However, overall, the two Parties, Conservative and Liberal supporters, had the highest income. Instead, the Liberal Party had more widespread distribution of income compared to the Conservative Party. The points indicate the outliers. Even after removing the outliers in the previous step, Conservative Party had some outliers using the leftover data points. The rest of the Parties had a similar distribution in income.
+
+The following graph will show the distribution of the `cps19_education`. Similar to the first graph with `cps19_province`, the multiple bar graphs will be generated by wrapping the same education level. Among the same education level, the Party that the individual supports are recorded for bar graphs.
+
+Before generating a graph, the survey result will be converted into a practical format, using the actual word that describes the education level. For instance, 1 does not give any information about the education level. Therefore, using the guide book for the survey, it will be converted to 'No schooling' (Stephenson et al., 2020). 2 will be converted to 'Some elementary school', 3 will be converted to 'Completed elementary school', and so on (Stephenson et al., 2020).
+
+```{r, include=FALSE}
+survey_word$cps19_education[survey_word$cps19_education == 1] <- 'No schooling'
+survey_word$cps19_education[survey_word$cps19_education == 2] <- 'Some elementary school'
+survey_word$cps19_education[survey_word$cps19_education == 3] <- 'Completed elementary school'
+survey_word$cps19_education[survey_word$cps19_education == 4] <- 'Some secondary/ high school'
+survey_word$cps19_education[survey_word$cps19_education == 5] <- 'Completed secondary/ high school'
+survey_word$cps19_education[survey_word$cps19_education == 6] <- "Some technical, community college, CEGEP, College Classique"
+survey_word$cps19_education[survey_word$cps19_education == 7] <- "Completed technical, community college, CEGEP, College Classique"
+survey_word$cps19_education[survey_word$cps19_education == 8] <- "Some university"
+survey_word$cps19_education[survey_word$cps19_education == 9] <- "Bachelor's degree"
+survey_word$cps19_education[survey_word$cps19_education == 10] <- "Master's degree"
+survey_word$cps19_education[survey_word$cps19_education == 11] <- "Professional degree or doctorate"
+survey_word$cps19_education[survey_word$cps19_education == 12] <- "Don't know/ Prefer not to answer"
+
+```
+
+```{r fig.height=20, fig.width=20, echo = FALSE }
+ggplot(survey_word,aes(x = cps19_votechoice)) + 
+  geom_bar() + 
+  theme(axis.text.x = element_text(angle=90, hjust=1), text = element_text(size=15)) +
+  facet_wrap(~cps19_education, scales = "free") +
+  scale_y_continuous(name="Count") + 
+  xlab("Party Choice of Individuals")+
+  theme(strip.background =element_rect(fill="black"), strip.text = element_text(colour = 'white', size = 15)) +
+  ggtitle("Voting Result of Individuals in Each Education Level")
+```
+
+Regarding all groups, a similar pattern was observed across most of the groups. No matter which level of education was completed, most groups supported the Liberal Party or the Conservative Party. The difference is that most groups tended to support one party over the other. Most people who completed a higher level of education, such as a professional degree or doctorate, Master's degree, Bachelor's degree tended or some university to support the Liberal Party more over the Conservative. However, the people who completed lower levels than the university did not show any pattern. Some groups tended to support Conservatives while some supported Liberal. Therefore, it will require more research to see the precise pattern of support. The new pattern was introduced in the group who did not get any schooling. They tended to support Green Party at a similar level to the Conservative Party. However, while the sample size of the people who did not get any schooling is small, a small sample size may cause sampling bias.
+
+
+Lastly, bar graphs will be introduced again. The graphs will present how the religious affiliation influences the supporting Party. The Party that people support may vary due to their beliefs. The main focus these days is on abortion and same-sex marriage.
+
+Again, the survey result will be converted into a practical format, using the actual description of religion. For example, 5 does not give any information about any religion. Therefore, using the survey guidebook will be converted to 'Jewish/ Judaism/ Jewish Orthodox' (Stephenson et al., 2020). The other numbers will be changed into an actual religion designation.
+
+```{r, include=FALSE}
+survey_word$cps19_religion[survey_word$cps19_religion == 1] <- "None/ Don't have one/ Atheist"
+survey_word$cps19_religion[survey_word$cps19_religion == 2] <- 'Agnostic'
+survey_word$cps19_religion[survey_word$cps19_religion == 3] <- 'Buddhist/ Buddhism'
+survey_word$cps19_religion[survey_word$cps19_religion == 4] <- 'Hindu'
+survey_word$cps19_religion[survey_word$cps19_religion == 5] <- 'Jewish/ Judaism/ Jewish Orthodox'
+survey_word$cps19_religion[survey_word$cps19_religion == 6] <- 'Muslim/ Islam'
+survey_word$cps19_religion[survey_word$cps19_religion == 7] <- 'Sikh/ Sikhism'
+survey_word$cps19_religion[survey_word$cps19_religion == 8] <- 'Anglican/ Church of England'
+survey_word$cps19_religion[survey_word$cps19_religion == 9] <- 'Baptist'
+survey_word$cps19_religion[survey_word$cps19_religion == 10] <- 'Catholic/ Roman Catholic/ RC'
+survey_word$cps19_religion[survey_word$cps19_religion == 11] <- 'Greek Orthodox/ Ukrainian Orthodox/ Russian Orthodox/ Eastern Orthodox'
+survey_word$cps19_religion[survey_word$cps19_religion == 12] <- "Jehovah's Witness"
+survey_word$cps19_religion[survey_word$cps19_religion == 13] <- 'Lutheran'
+survey_word$cps19_religion[survey_word$cps19_religion == 14] <- 'Mormon/ Church of Jesus Christ of the Latter Day Saints'
+survey_word$cps19_religion[survey_word$cps19_religion == 15] <- 'Pentecostal/ Fundamentalist/ Born Again/ Evangelical'
+survey_word$cps19_religion[survey_word$cps19_religion == 16] <- 'Presbyterian'
+survey_word$cps19_religion[survey_word$cps19_religion == 17] <- 'Protestant'
+survey_word$cps19_religion[survey_word$cps19_religion == 18] <- 'United Church of Canada'
+survey_word$cps19_religion[survey_word$cps19_religion == 19] <- 'Christian Reformed'
+survey_word$cps19_religion[survey_word$cps19_religion == 20] <- 'Salvation Army'
+survey_word$cps19_religion[survey_word$cps19_religion == 21] <- 'Mennonite'
+survey_word$cps19_religion[survey_word$cps19_religion == 22] <- 'Other (please specify)'
+survey_word$cps19_religion[survey_word$cps19_religion == 23] <- "Don't know/ Prefer not to answer"
+```
+
+
+```{r fig.height=30, fig.width=20, echo = FALSE }
+ggplot(survey_word,aes(x = cps19_votechoice)) + 
+  geom_bar() + 
+  theme(axis.text.x = element_text(angle=90, hjust=1), text = element_text(size=15)) +
+  facet_wrap(~cps19_religion, scales = "free") +
+  scale_y_continuous(name="Count") + 
+  xlab("Party Choice of Individuals")+
+  theme(strip.background =element_rect(fill="black"), strip.text = element_text(colour = 'white', size = 15)) +
+  ggtitle("Voting Result of Individuals in Each Religion")
+```
+
+A similar pattern was observed across most of the groups. Most of the groups tended to support Liberal Party or the Conservative Party. However, some groups had more extreme results. For example, 'Baptist', 'Lutheran', or 'Mennonite' supported Conservative Party extremely, that the people who support the other Party were very minimal. Similarly, the religions such as 'Muslim/ Islam' or 'Sikh/ Sikhism' supported Liberal Party over the other parties. Some religions both Liberal Party and the Conservative Party. However, most religions preferred one Party over the other. More religions supported Conservative over Liberal. However, people who did not have any religion tended to support Liberal. While the graphs show the extreme results, the factor "religion" would be an essential point to consider to predict the future 2023 Federal Election.
+
+Before proceeding to the next section, the `census_data` and `survey_data` were manipulated to make them have the common cells. For example, in the `survey_data`, the word that indicates male was 'A man'. However, in `census_data`, it was 'Male'. All the cell that included 'A man' in `census_data` was changed into 'Male' to avoid error in the later process. All the other columns went through the same process.
+```{r, include=FALSE}
+survey_word$cps19_gender[survey_word$cps19_gender == 1] <- 'A man'
+survey_word$cps19_gender[survey_word$cps19_gender == 2] <- 'A woman'
+survey_word$cps19_gender[survey_word$cps19_gender == 3] <- 'Other (e.g. Trans, non-binary, two-spirit, gender-queer)'
+survey_word$cps19_gender[survey_word$cps19_gender == 'A man'] <- 'Male'
+survey_word$cps19_gender[survey_word$cps19_gender == 'A woman'] <- 'Female'
+survey_word$cps19_gender[survey_word$cps19_gender == 'Other (e.g. Trans, non-binary, two-spirit, gender-queer)'] <- 'Female'
+```
+
+```{r, include=FALSE}
+survey_word$cps19_education[survey_word$cps19_education == 'No schooling'] <- 'Less than high school diploma or its equivalent'
+survey_word$cps19_education[survey_word$cps19_education == 'Some elementary school'] <- 'Less than high school diploma or its equivalent'
+survey_word$cps19_education[survey_word$cps19_education == 'Completed elementary school'] <- 'Less than high school diploma or its equivalent'
+survey_word$cps19_education[survey_word$cps19_education == 'Some secondary/ high school'] <- 'High school diploma or a high school equivalency certificate'
+survey_word$cps19_education[survey_word$cps19_education == 'Completed secondary/ high school'] <- 'High school diploma or a high school equivalency certificate'
+survey_word$cps19_education[survey_word$cps19_education == "Some technical, community college, CEGEP, College Classique"] <- "Trade certificate or diploma"
+survey_word$cps19_education[survey_word$cps19_education ==  "Completed technical, community college, CEGEP, College Classique"] <- 'College, CEGEP or other non-university certificate or di...'
+survey_word$cps19_education[survey_word$cps19_education == "Some university"] <- "University certificate or diploma below the bachelor's level"
+survey_word$cps19_education[survey_word$cps19_education == "Bachelor's degree"] <- "Bachelor's degree (e.g. B.A., B.Sc., LL.B.)"
+survey_word$cps19_education[survey_word$cps19_education == "Master's degree"] <- "University certificate, diploma or degree above the bach..."
+survey_word$cps19_education[survey_word$cps19_education == "Professional degree or doctorate"] <- "University certificate, diploma or degree above the bach..."
+survey_word$cps19_education[survey_word$cps19_education == "Don't know/ Prefer not to answer"] <- "Don't know/ Prefer not to answer"
+```
+
+
+```{r, include=FALSE}
+survey_word$cps19_religion[survey_word$cps19_religion == "None/ Don't have one/ Atheist"] <- 'No religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Agnostic'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Buddhist/ Buddhism'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Hindu'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Jewish/ Judaism/ Jewish Orthodox'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Muslim/ Islam'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Sikh/ Sikhism'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Anglican/ Church of England'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Baptist'] <- 
+survey_word$cps19_religion[survey_word$cps19_religion == 'Catholic/ Roman Catholic/ RC'] <-'Has religious affiliation' 
+survey_word$cps19_religion[survey_word$cps19_religion == 'Greek Orthodox/ Ukrainian Orthodox/ Russian Orthodox/ Eastern Orthodox'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == "Jehovah's Witness"] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Lutheran'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Mormon/ Church of Jesus Christ of the Latter Day Saints'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Pentecostal/ Fundamentalist/ Born Again/ Evangelical'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Presbyterian'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Protestant'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'United Church of Canada'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Christian Reformed'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Salvation Army'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Mennonite'] <- 'Has religious affiliation'
+survey_word$cps19_religion[survey_word$cps19_religion == 'Other (please specify)'] <-'Has religious affiliation' 
+survey_word$cps19_religion[survey_word$cps19_religion == "Don't know/ Prefer not to answer"] <- "Don't know"
+
+```
+
+```{r, include=FALSE}
+survey_word$cps19_province[survey_word$cps19_province == 'Alberta'] <- 'Alberta'
+survey_word$cps19_province[survey_word$cps19_province == 'British Columbia'] <- 'British Columbia'
+survey_word$cps19_province[survey_word$cps19_province == 'Manitoba'] <- 'Manitoba'
+survey_word$cps19_province[survey_word$cps19_province == 'New Brunswick'] <- 'New Brunswick'
+survey_word$cps19_province[survey_word$cps19_province == 'Newfoundland and Labrador'] <- 'Newfoundland and Labrador'
+survey_word$cps19_province[survey_word$cps19_province == 'Northwest Territories'] <- ''
+survey_word$cps19_province[survey_word$cps19_province == 'Nova Scotia'] <- 'Nova Scotia'
+survey_word$cps19_province[survey_word$cps19_province == 'Nunavut'] <- ''
+survey_word$cps19_province[survey_word$cps19_province == 'Ontario'] <- 'Ontario'
+survey_word$cps19_province[survey_word$cps19_province == 'Prince Edward Island'] <- 'Prince Edward Island'
+survey_word$cps19_province[survey_word$cps19_province == 'Quebec'] <- 'Quebec'
+survey_word$cps19_province[survey_word$cps19_province == 'Saskatchewan'] <- 'Saskatchewan'
+survey_word$cps19_province[survey_word$cps19_province == 'Yukon'] <- ''
+
+survey_data <- survey_data %>% drop_na()
+```
+
+## Methods
+
+The goal of this report is to predict the popular vote of the 2023 Canadian federal election with the use of logistic modelling and post-stratification. We will create two logistic regression models, one to model the probability of a person voting for the Liberal Party and another one to model the probability of a person voting for the Conservative Party. In this case, a logistic model is appropriate since our dependent variable is going to be binary. It will tell us whether or not a person voted for the Liberal/Conservative Party with the variable only having two possible values. After creating our models we will post-stratify, allowing us to calculate the probability of each party winning the overall popular vote.
+
+
+
+
+### Model Specifics
+**Modelling the Probability of Voting for the Liberal Party**
+
+The first model we will create is the Bayesian logistic model that will predict the probability of a certain person voting for the Liberal Party, depending on their age, gender, religion, education level and the province of residence. All five variables will be treated as individual-level variables. Before creating this model, we must add another variable named `voted_liberal` to our survey data. This variable will have a value of 1 if a person voted Liberal in 2019 and a value of 0 otherwise. `voted_liberal` is the key to allowing us to create a logistic model.
+
+```{r, include=FALSE}
+
+survey_word <- survey_word %>% mutate(voted_liberal = ifelse(cps19_votechoice=='Liberal Party',1,0))
+```
+Now that we have our binary dependent variable created, we can create our Bayesian model as the following:
+
+$$log(\frac{p}{1-p}) = \beta_0+\beta_1  x_{age} + \beta_2  x_{gender} + \beta_3  x_{religion} + \beta_4  x_{education} + \beta_5  x_{province}$$
+
+In the model above, $log(\frac{p}{1-p})$ represents the logarithm of the odds for a certain person voting for the Liberal Party given their age, gender, religion, education, and province. Later on, in the Methods section, we will use these log odds to calculate the probability of that certain person voting Liberal in the upcoming election. On the other side of the equation, $\beta_0$ represents the model's intercept. This tells us the log odds of a person with an age of 0 and no gender, religion, education or province of residence voting for the Liberal Party. Furthermore, $\beta_1$ represents the change in log odds of voting Liberal for a one-year increase in age. Similarly, $\beta_2$, $\beta_3$, $\beta_4$, and $\beta_5$ also represent the change in log odds of voting for the Liberal Party when values for gender, religion, education and province are changed, respectively. Finally, $x_{age}$, $x_{gender}$,$x_{religion}$, $x_{education}$ and $x_{education}$ are the values for a person's specific age, gender, religion, education level and province of residence, respectively.
+
+```{r, include=FALSE}
+library(brms)
+library(broom)
+
+# Logistic Model for Liberal Party
+lib_model <- brm(voted_liberal ~ cps19_age + cps19_gender + cps19_religion + cps19_education + cps19_province, data=survey_word, family = bernoulli())
+
+
+```
+
+
+**Modelling the Probability of Voting for the Conservative Party**
+
+The next model that we will create is the Bayesian logistic model that will predict the probability of a certain person voting for the Conservative Party. We will be using the same variables as the model above: age, gender, religion, education level and the province of residence. Similar to the Liberal model, we must add and include an extra variable named `voted_conservative` that will have a value of 1 if a person voted Conservative in 2019 and a value of 0 otherwise. This variable will once again allow us to create our logistic regression.
+
+
+
+```{r, include=FALSE}
+
+survey_word <- survey_word %>% mutate(voted_conservative = ifelse(cps19_votechoice=='Conservative Party',1,0))
+```
+After creating `voted_conservative`, we can continue onto creating the model:
+
+$$log(\frac{p}{1-p}) = \beta_0+\beta_1  x_{age} + \beta_2  x_{gender} + \beta_3  x_{religion} + \beta_4  x_{education} + \beta_5  x_{province}$$
+
+In this model, $log(\frac{p}{1-p})$ now represents the logarithm of the odds for a certain person voting for the Conservative Party given their age, gender, religion, education, and province. On the right-hand side, $\beta_0$ once again represents the random intercept that tells us the log odds of a person with an age of 0 and no gender, religion, education, or province voting Conservative. Similar to the Liberal model, $\beta_1$ represents the change in log odds of voting Conservative for a one-year increase in age. Additionally, $\beta_2$, $\beta_3$, $\beta_4$ and $\beta_5$ represent the change in log odds of voting for the Conservative Party when the values for gender, religion, education, and province are altered, respectively. Lastly, $x_{age}$, $x_{gender}$,$x_{religion}$, $x_{education}$ and $x_{education}$ are the actual values for person's specific age, gender, religion, education level and province of residence, respectively.
+
+```{r, include=FALSE}
+
+# Logistic Model for Conservative Party
+cons_model <-brm(voted_conservative ~ cps19_age + cps19_gender + cps19_religion + cps19_education + cps19_province, data=survey_word, family = bernoulli())
+
+```
+
+
+### Post-Stratification
+
+After having done the regression modelling, we outsource our model to the use of post-stratification in order to provide estimates which, rather than only using raw counts in stratum, are estimates fully based on combinations of predictors. Moreover, the technique is based on adjusting a sample that is non-representative where demographic predictors characterizing the strata are present. Therefore, in simple words, it uses demographics in order to "extrapolate" how, in this case, the entire population will vote in the upcoming Canadian elections.
+
+#### Mathematical Notation
+
+To estimate the proportion of voters for each party, the post-stratification formula which will be used is:
+
+$$\hat{y}^{PS} = \frac{\Sigma N_j\hat{y}_j}{\Sigma N_j}$$
+
+Where:
+$\hat{y}^{PS}$ = the estimate of the Post-Stratification, 
+$\hat{y}_j$ = the estimate in each cell (province or territory), and
+$N_j$ = the population size of the $j^{th}$ cell (province or territory) based off demographics.
+
+Post-stratification is highly beneficial since it adjusts the estimates (like weight averaging) from the possible combinations of all the attributes. Therefore, it corrects the model estimates for known differences between target population, sample, and population. Thus, it helps us increase the accuracy of the estimates of the model.
+
+
+#### Post-Stratification Variables
+
+The cells in the post-stratification will be the Canadian provinces and territories, which is a total of 13. The independent variables which will be used, as mentioned under the Data section, are: `cps19_yob`, `cps19_gender`, `cps19_province`, `cps19_education`, , `cps19_income_number`, `cps19_religion`. These variables are the age of the voter, gender, province of residence, the highest level of education that the survey participants have completed, the total household income before taxes for 2018, and religion, respectively.
+
+However, in this case, the `csp19_province` will be used in the post-stratification as the cells when predicting if the population will vote for the liberal party or the conservative party. We use the province as the cells' split in the post-stratification because it is very likely that their difference in locations can heavily influence voter election parties. This is due to the difference in industries that each province excels in (e.g. agriculture, services, natural resources, fishing, etc.). Therefore, different proposals and/or problems that each province faces can heavily influence whether the voter is satisfied with the current provincial government or not. Lastly, a provincial government that has succeeded in another province can influence other provinces to adopt a similar party if they do not have it at the moment.
+
+With regards to the assumptions for the variables, one assumption is that the observations in the sample are independent of each other. Thus, each observation is by no means related nor influenced by others for each sample subject. This assumption is true since the sample of observations is composed of different people in it and not by the same person. 
+
+Therefore, after stating the reasons as to why we use the province as the cell split, the independent variables, and the correct assumptions of the variables, we can determine that the method is appropriate for the estimation of the entire population vote for the upcoming Canadian election.
+
+
+
+
+## Results 
+
+### Bayesian Logistic Regression Models
+
+```{r echo=FALSE}
+broom_lib <- broom.mixed::tidy(lib_model)
+lib_table = subset(broom_lib, select = -c(effect, component, group))
+lib_table[1, "term"] <- "Intercept"
+lib_table[2, "term"] <- "Age"
+lib_table[3, "term"] <- "Male"
+lib_table[4, "term"] <- "Has religious affiliation"
+lib_table[5, "term"] <- "No religious affiliation"
+lib_table[6, "term"] <- "College or other non-university certificate/diploma"
+lib_table[7, "term"] <- "Prefer not to answer (education)"
+lib_table[8, "term"] <- "High school diploma"
+lib_table[9, "term"] <- "Less than a highschool diploma"
+lib_table[10, "term"] <- "Trade certificate or diploma "
+lib_table[11, "term"] <- "University certificate/diploma below bachelors"
+lib_table[12, "term"] <- "University certificate/diploma above bachelors"
+lib_table[13, "term"] <- "Alberta"
+lib_table[14, "term"] <- "British Columbia"
+lib_table[15, "term"] <- "Manitoba"
+lib_table[16, "term"] <- "New Brunswick"
+lib_table[17, "term"] <- "Newfoundland and Labrador"
+lib_table[18, "term"] <- "Nova Scotia"
+lib_table[19, "term"] <- "Ontario"
+lib_table[20, "term"] <- "Prince Edward Island"
+lib_table[21, "term"] <- "Quebec"
+lib_table[22, "term"] <- "Saskatchewan"
+names(lib_table)[1] <- "Term"
+names(lib_table)[2] <- "Estimate"
+names(lib_table)[3] <- "Std. Error"
+names(lib_table)[4] <- "Lower 95% CI"
+names(lib_table)[5] <- "Upper 95% CI"
+knitr::kable(lib_table, "latex")
+```
+**Table 1.** Summary of the regression model predicting the probability of a certain person voting for the Liberal Party.
+
+The table above showcases the outputs of the regression model predicting the probability of a certain person voting for the Liberal Party. The slope estimates represent the change in the expected log odds of voting Liberal when values for age, gender, religion, education, and province are changed, respectively. In other words, this fitted model says that holding everything else at a fixed value, the odds of a person voting Liberal given that they live in Nova Scotia (Nova Scotia = 1) over the odds of a person voting Liberal given that they do not live in Nova Scotia (Nova Scotia = 0) is exp(0.17938) = 1.1965; and the coefficient for age says that holding everything else at a fixed value, we will see a 0.5% increase in the odds of observing a person voting Liberal for a one-unit increase in age since exp(0.004949) = 1.00496. Therefore, a positive value for the coefficient estimate entails an odds ratio greater than 1, meaning an increase in the probability of the event when we have a positive change in the independent variable; and a negative value for the coefficient estimate entails an odds ratio less than 1, meaning a decrease in the probability of the event when we have a positive change in the independent variable.
+
+As seen in Table 1, for one year of increase in age, the odds of a person voting for the Liberal Party increases by `r exp(0.0049)` (95% CI: `r exp(0.0030)` - `r exp(0.0069)`). This is unexpected, as the younger generation is generally thought of as more progressive and liberal in their political views; hence, we expect to see the odds of voting Liberal decrease as age increases. This discrepancy between expectation and result may be due to a low survey participation rate among younger people, making the sample of younger people, not representative of the actual younger population in Canada due to the small sample size for younger people. Another plausible explanation is that the younger population is more likely to vote for non-major left-leaning political parties (e.g. New Democratic Party and the Green Party) than the older population. Therefore, as age increases, the likelihood of voting for a major political party (in this case, the Liberal Party) increases.
+
+In addition, the odds of a person voting for the Liberal Party, whether that person has religious affiliation or not, increases nonetheless; this means that whether or not someone has religious affiliation is not a good predictor of whether that person will vote Liberal or not.
+
+With regards to education, Table 1 indicates that the log odds of a person voting for the Liberal party decreases if that person has the highest level of education, anything below a University Bachelor's degree. On the other hand, the odds of a person voting for the Liberal party increases by `r exp(0.054)` (95% CI: `r exp(-0.0398)` - `r exp(0.1490)`) if that person has a university certificate or diploma above the bachelors level.
+
+With regards to the province, the most notable results are Alberta and Saskatchewan. The odds of a person voting for the Liberal party decreases by `r exp(-1.056)` (95% CI: `r exp(-1.577)` - `r exp(-0.536)`) if that person resides in Alberta, and decreases by `r exp(-1.270)` (95% CI: `r exp(-1.810)` - `r exp(-0.712)`) if that person resides in Saskatchewan. These results are unsurprising, as Alberta and Saskatchewan have always been Conservative-majority provinces in recent elections due to dominant sociopolitical and economic discourses.
+
+
+```{r echo=FALSE}
+broom_cons <- broom.mixed::tidy(cons_model)
+cons_table = subset(broom_cons, select = -c(effect, component, group))
+cons_table[1, "term"] <- "Intercept"
+cons_table[2, "term"] <- "Age"
+cons_table[3, "term"] <- "Male"
+cons_table[4, "term"] <- "Has religious affiliation"
+cons_table[5, "term"] <- "No religious affiliation"
+cons_table[6, "term"] <- "College or other non-university certificate/diploma"
+cons_table[7, "term"] <- "Prefer not to answer regarding education"
+cons_table[8, "term"] <- "High school diploma"
+cons_table[9, "term"] <- "Less than a highschool diploma"
+cons_table[10, "term"] <- "Trade certificate or diploma "
+cons_table[11, "term"] <- "University certificate/diploma below bachelors"
+cons_table[12, "term"] <- "University certificate/diploma above bachelors"
+cons_table[13, "term"] <- "Alberta"
+cons_table[14, "term"] <- "British Columbia"
+cons_table[15, "term"] <- "Manitoba"
+cons_table[16, "term"] <- "New Brunswick"
+cons_table[17, "term"] <- "Newfoundland and Labrador"
+cons_table[18, "term"] <- "Nova Scotia"
+cons_table[19, "term"] <- "Ontario"
+cons_table[20, "term"] <- "Prince Edward Island"
+cons_table[21, "term"] <- "Quebec"
+cons_table[22, "term"] <- "Saskatchewan"
+names(cons_table)[1] <- "Term"
+names(cons_table)[2] <- "Estimate"
+names(cons_table)[3] <- "Std. Error"
+names(cons_table)[4] <- "Lower 95% CI"
+names(cons_table)[5] <- "Upper 95% CI"
+knitr::kable(cons_table, "latex")
+```
+**Table 2.** Summary of the regression model predicting the probability of a certain person voting for the Conservative Party.
+
+The table above showcases the outputs of the regression model predicting the probability of a certain person voting for the Conservative Party. The slope estimates represent the change in the expected log odds of voting Conservative when values for age, gender, religion, education, and province are changed, respectively. As seen in Table 2, for one year of increase in age, the odds of a person voting for the Conservative Party increases by `r exp(0.0061)` (95% CI: `r exp(0.0041)` - `r exp(0.0081)`). This is unsurprising, as the younger generation is generally thought of as more liberal and the older generation as more conservative in their political views. Hence, it is unsurprising to see the log odds of voting Conservative increase as age increases.
+
+In addition, the odds of a person voting for the Conservative Party increases by `r exp(0.432)` (95% CI: `r exp(0.264)` - `r exp(0.601)`) if that person has religious affiliation. This seems plausible, as different religions often have their own dominant or affiliated sociopolitical views, and it is possible that people with religious affiliation generally find that the Conservative party's policies align best with their sociopolitical views and religious principles.
+
+With regards to education, Table 2 indicates that the odds of a person voting for the Conservative party increases by `r exp(0.245)` (95% CI: `r exp(0.152)` - `r exp(0.336)`) if that person has the highest level of education of a college or other non-university certificate or diploma, increase by `r exp(0.324)` (95% CI: `r exp(0.230)` - `r exp(0.419)`) if that person has the highest level of education of a high school diploma, and increases by `r exp(0.272)` (95% CI: `r exp(0.230)` - `r exp(0.419)`) if that person has the highest level of education of a trade certificate or diploma. On the other hand, the odds of a person voting for the Conservative party decreases by `r exp(-0.1693)` (95% CI `r exp(-0.2792)` - `r exp(-0.05739)`) if that person has a university certificate or diploma above the bachelors level.
+
+With regards to provinces, the most notable results are Alberta, Manitoba, and Saskatchewan. The odds of a person voting for the Conservative party increases by `r exp(1.82825)` (95% CI `r exp(1.17385)` - `r exp(2.60323)`) if that person resides in Alberta, increases by `r exp(1.01748)` (95% CI `r exp(0.3465)` - `r exp(1.7894)`) if that person resides in Manitoba, and increases by `r exp(1.47367)` (95% CI `r exp(0.78862)` - `r exp(2.23434)`) if that person resides in Saskatchewan. These results are unsurprising, as Alberta, Manitoba, and Saskatchewan have predominantly been Conservative-majority provinces in recent elections due to dominant sociopolitical and economic discourses.
+
+
+### Post-stratification
+
+```{r, echo=FALSE, message=FALSE}
+# Changing variables' names
+census_data <- census_data %>%
+  rename(
+    cps19_age = age,
+    cps19_gender = sex,
+    cps19_province = province,
+    cps19_education = education,
+    cps19_income_number = income_respondent,
+    cps19_religion = religion_has_affiliation
+  )
+```
+
+
+```{r, echo=FALSE, message=FALSE}
+# Post-Stratification Model
+N = nrow(census_data)
+set.seed(1234)
+
+census_data_counts <-
+  census_data %>%
+  group_by(cps19_province) %>%
+  summarize(n=n())
+
+census_data$estimate_1 <-
+  lib_model %>%
+  predict(newdata = census_data)
+
+census_pred_1 <- census_data %>%
+  mutate(lib_predict_prop = estimate_1*(1/N)) %>%
+  group_by(cps19_province) %>%
+  #summarise(lib_predict = sum(lib_predict_prop))
+  summarise(lib_prob = exp(sum(lib_predict_prop))/(1+exp(sum(lib_predict_prop))))
+
+```
+
+```{r, echo=FALSE, message=FALSE}
+census_data$estimate_2 <-
+  cons_model %>%
+  predict(newdata = census_data)
+
+census_pred_2 <- census_data%>%
+  mutate(cons_predict_prop = estimate_2*(1/N)) %>%
+  group_by(cps19_province) %>%
+  #summarise(cons_predict = sum(cons_predict_prop))
+  summarise(cons_pred = exp(sum(cons_predict_prop))/(1+exp(sum(cons_predict_prop))))
+
+pred_lib = sum(census_pred_1$lib_prob*census_data_counts$n)/sum(census_data_counts$n)
+pred_cons = sum(census_pred_2$cons_pred*census_data_counts$n)/sum(census_data_counts$n)
+
+```
+
+
+```{r, echo = FALSE}
+pred_merged <- census_pred_1
+pred_merged$cons_prob <- census_pred_2$cons_pred
+pred_long <- melt(pred_merged, id = "cps19_province")
+knitr::kable(pred_merged, "latex")
+```
+**Table 3.** Table showcasing the probabilities of a given province voting for the Liberal party versus the Conservative party.
+
+```{r, echo = FALSE}
+ggplot(pred_long, aes(x = cps19_province, y = value, fill = variable)) + geom_bar(stat = "identity", position = "dodge") + theme(axis.text.x = element_text(angle = 90))
+```
+**Figure 6.** Bar chart comparing the probabilities of a province voting for the Liberal Party versus the Conservative Party.
+
+After back calculating the probability of voting for the Liberal Party from the log odds, we obtain the above table. As seen in Table 3 and Figure 6, Ontario has the highest probability of voting for the Liberal party, and Prince Edward Island has the lowest probability of voting for the Liberal Party. Moreover, Ontario also has the highest probability of voting for the Conservative party, and Prince Edward Island also has the lowest probability of voting for the Conservative Party. This seems to suggest that people in Ontario are most likely among all provinces to vote for a major political party (liberal/conservative), and people in Prince Edward Island are least likely to vote for a major political party. This seems appropriate; Ontario has the largest population in the country and has the highest electoral quotient in the country (electoral quotient = 111,144), hence people may be more motivated to "compete" against a large number of people within their own province to secure a majority within the province. On the other hand, Prince Edward Island has the lowest electoral quotient among all provinces (electoral quotient = 35,726). Thus, people in Prince Edward Island may be less motivated to intentionally vote for a majority party in order to secure a majority within their province. ("House of Commons of Canada", 2021)
+
+
+```{r, echo=FALSE, message=FALSE}
+final_pred <- tibble(pred_lib, pred_cons)
+knitr::kable(final_pred, "latex")
+```
+**Table 4.** Post-stratified probabilities of observing a person voting for the Liberal party vs the Conservative party.
+
+After performing post-stratification based on the provinces, we finally obtain the above probabilities. `pred_lib` is the probability of a person voting for the Liberal party, and `pred_cons` is the probability a person voting for the Conservative party. As we can see, according to our models, the Liberal party has a slightly higher probability of winning the 2023 Canadian federal election. This result seems to confirm our original prediction that the Liberal party will win the election. This result seems appropriate as a vast majority of opinion polls conducted by different polling firms for the 2023 Canadian federal election indicating that the Liberal Party is leading (“Opinion polling for the 44th Canadian federal election,” 2021). In fact, all of the opinion polls conducted after October 2020 indicate that the Liberal Party is in the lead. Therefore, our final result agrees with current opinion polls for the 2023 Canadian federal election.
+
+
+
+## Conclusions
+
+Now that we have created, run and collected the results of our two logistic regressions with post-stratification, we can determine the accuracy of our initial hypothesis and make a statement regarding the projected winner of the 2023 Canadian federal election's popular vote. Near the beginning of this report, the data collected from many different opinion polls regarding the 2023 federal election caused us to hypothesize that the Liberal Party would win the popular vote. We then created two Bayesian logistic regression models, one that would model the probability of a certain person voting for the Liberal Party and the other that would model the probability that a person would vote for the Conservative Party. Both of these probabilities would be based on a person's age, gender, religion, education level and the province of residence. We then ran both models on the population and post-stratified based on province, using the GSS Census Data. When looking at the results, we saw that our Liberal model estimated that a person would have a 56.6% chance of voting for the Liberal Party in the next election, therefore winning the popular vote. Our Conservative model surprisingly gave us a similar number. We saw that our Conservative model estimated that a person would have a 56.3% chance of voting Conservative in the next election, signalling that the Conservatives would win the popular vote. Although it may seem impossible that our results show that both parties have a greater than 50% chance of winning, there is a definite explanation. The reason for both of these values being greater than 50% is that the two models we ran were independent of each other, meaning that the value produced by the Liberal model has no effect on the value created by the Conservative model, and vice versa. Each model is only concerned with the probability of one party winning and is not attempting to determine the percentage of votes any other party will receive.
+
+When looking at the results of our two models, it is difficult to determine whether our initial hypothesis was correct. In the Liberal model, the Liberals are projected to win, while in the Conservative model, the Conservatives are projected to win. Even though in the Liberal model, people are predicted to vote Liberal with a 56.6% chance, which is 0.3% more than the Conservatives are estimated to have in the Conservative model, we are unable to conclude that the Liberals are estimated to win the upcoming election.  This is, once again, due to the two models being independent. One other potential weakness of this report is that we are using data that was collected in 2019 in hopes of estimating federal election outcomes in 2023. This has most likely had a damaging effect on the accuracy of our models as data can change greatly in the span of four years, especially during a global pandemic. The data we used in this report will most likely not be a true representation of the Canadian population in 2023. An interesting opportunity for the future would be to run an analysis similar to the one in this report with a model that would calculate the proportion of votes that each party will receive as opposed to calculating the proportion of votes for only one certain party. This, paired with data from a year closer to 2023, could give us a clearer picture of who we can expect to win the upcoming federal election. 
+
+Despite our inability to come to a clear conclusion on who can be expected to win the 2023 Canadian federal election, we were able to witness how logistic regression and post-stratification can be used to make predictions and gain insight into significant happenings in our daily lives. Moreover, we were shown how two nearly identical models using the same data are capable of producing such contrasting results. Overall, this report exposes the everlasting uncertainty and doubt that is present in Canadian politics.
+
+
+## Bibliography
+
+1. Schenker, J. G., & Rabenou, V. (1993) *Contraception: traditional and religious attitudes*. European journal of obstetrics, gynecology, and reproductive biology, 49(1-2), 15–18. [https://doi.org/10.1016/0028-2243(93)90102-i](https://doi.org/10.1016/0028-2243(93)90102-i). (Last Accessed: May 22, 2021)
+
+2. Elections Canada. (2020, August 11) *Voter Turnout by Sex and Age* [https://www.elections.ca/content.aspx?section=res&dir=rec/eval/pes2019/vtsa&document=index&lang=e](https://www.elections.ca/content.aspx?section=res&dir=rec/eval/pes2019/vtsa&document=index&lang=e). (Last Accessed: May 24, 2021)
+
+3. Breen, K. (2019, October 4) *The ‘genderation’ gap: political divisions exist between men, women, different age groups, polls show*. Global News. [https://globalnews.ca/news/5988160/genderation-gap-political-divisions-men-women/](https://globalnews.ca/news/5988160/genderation-gap-political-divisions-men-women/). (Last Accessed: May 24, 2021)
+
+4. Stephenson, L., et al. (2020, April 29) *Canadian Election Study 2019 Online Survey Codebook*. Harvard Dataverse. (Last Accessed: May 24, 2021)
+  
+5. Hadley Wickham, Romain François, Lionel Henry and Kirill Müller. (2021). *dplyr: A Grammar of Data Manipulation*.
+ [https://dplyr.tidyverse.org, https://github.com/tidyverse/dplyr](https://dplyr.tidyverse.org, https://github.com/tidyverse/dplyr). (Last Accessed: May 24, 2021)
+ 
+6. Wang, W., Rothschild, D., Goel, S., & Gelman, A. (2015). Forecasting elections with non-representative polls. International Journal of Forecasting, 31(3), 980-991.
+
+7. Opinion polling for the 44th Canadian federal election. (2021, May 27). In Wikipedia. [https://en.wikipedia.org/wiki/Opinion_polling_for_the_44th_Canadian_federal_election](https://en.wikipedia.org/wiki/Opinion_polling_for_the_44th_Canadian_federal_election). (Last Accessed: May 27, 2021)
+
+8. House of Commons of Canada. (2021, May 28). In Wikipedia. [https://en.wikipedia.org/wiki/House_of_Commons_of_Canada#Members_and_electoral_districts](https://en.wikipedia.org/wiki/House_of_Commons_of_Canada#Members_and_electoral_districts). (Last Accessed: May 28, 2021)
+
+9. Stephenson, L., et al. (2020). 2019 Canadian Election Study - Online Survey. Harvard Dataverse. V1. [https://doi.org/10.7910/DVN/DUS88V](https://doi.org/10.7910/DVN/DUS88V).(Last Accessed: May 28, 2021)
+
+
+The packages used: tidyverse, dplyr, reshape, brms, broom
+*The tidyverse, dplyr and reshape were used to clean the dataset and draw the graphs, such as `ggplot`.
+*The brms and broom packages were used for model building process.
+
+```{r, include = FALSE}
+citation("tidyverse")
+citation("dplyr")
+citation("reshape2")
+```
+
+All analysis for this report was programmed using `R version 4.1.0`, R markdown.
+
+
+
+
+
