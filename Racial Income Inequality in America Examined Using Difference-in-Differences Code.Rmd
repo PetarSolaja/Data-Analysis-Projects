@@ -1,0 +1,272 @@
+---
+title: "Racial Income Inequality in America Examined Using Difference-in-Differences"
+author: "Petar Solaja - 1006271268"
+date: June 21, 2021
+output:
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+library(openintro)
+```
+
+
+
+# Abstract
+
+This report investigates the behaviour of income gaps between White, Hispanic, Black and Asian households within the United States of America over the course of the last 3 decades. Initial hypotheses stated that results would show that gaps between White and Hispanic or Black households would have expand and so would the gaps between Asian, White, Hispanic or Black households, but to a lesser extent. The data used in this report was found as one of the TidyTuesday datasets for 2021. It was collected from the U.S Census Bureau as well as the Urban Institute and contained information on the household incomes of several different racial groups in America throughout the last 50 years. To analyse the data, a 'difference-in-differences' approach was taken in which the median household income gaps between respective races were measured in the years 1987 and 2019. These two values were then compared to determine the amount in which median income gaps between households of different races increased or decreased from 1987 to 2019. Results showed us that the income gap between White and Hispanic households decreased by \$1,443 while the gap between White and Black households increased by \$1,322. Addtionally, we calculated that income gaps the income gaps between Asian households and White, Hispanic and Black households increased by \$15,677, \$14,234 and \$16,999, respectively. This report serves as confirmation to the severe racial inequalities present in the United States. Inequalities that have been in place since the formation of the country are continuing to expand.
+
+# Introduction
+The United States of America has been a nation in which social and economic divide has consistently been prominent. Constant advancements in technology as well as the rise of the internet have allowed a certain group of elites to collect mass amounts of wealth, further expanding the already existing wealth gap between the high and middle/low class. In late 2020, it was discovered that the top 1% of Americans holds 15 times as much wealth as the bottom 50%, a statistic that in itself tells you everything about the income disparity present between classes.[1] Although this issue is widely discussed in both social and political environments and has led to increased tensions between members of respective socioeconomic classes, it is not the type of wealth inequality that we will be discussing in this paper. Instead, we will be focusing on the income discrepencies present between racial groups in America, an issue that transcends economic classes. Income disparities between predominantly white households and households that are part of the Black and Hispanic communities have been a part of America since its origin and are thought of by many to be based more on oppurtunity rather than skill set, work ethic or fortune. A 2018 American Community Survey conducted by the U.S Census Bureau discovered that the median household income for White Americans was \$65,777, larger than the Hispanic median of \$51,404	and significantly larger than the African American household median of \$43,862.[2] On the other hand, Asian households in America were found to be the wealthiest out of all races with a median income of \$85,897.[2] The main objective of this paper is to determine whether these significant gaps in income between households of differing races have increased, decreased or stayed fairly consistent throughout the span of about 30 years. We will compare the household incomes of White Americans as well as Asian Americans to those of Hispanics and African Americans using the 'difference-in-differences' method to obtain our results and analyze the behaviour of these wealth gaps over time. During a time in which Americans are understanding the importance of equality more than ever, this report will give readers an idea of the changes in the quality of life that different minorities have experienced through their time in America and will hopefully educate readers on their enduring struggles. 
+
+Throughout this report, I will be referencing 4 different racial groups: White Americans, African Americans, Hispanics and Asian Americans. The U.S Census Bureau defines a White American as someone who has origins stemming from any of the original peoples of Europe, North Africa or the Middle East.[3] In 2019, they made up 75% of the total American population and had the highest percentage of residents in Maine, Vermont and West Virginia making up 94%, 94% and 93% of those 3 states, respectively.[4] Hispanic Americans, also reffered to as Latino Americans, are the most common minority group in the U.S and make up 18% of the total population.[4] According to the U.S Census Bureau, a Hispanic American is any person with ancestery originating from Cuba, Mexico, Puerto Rico or any other country in Central or South America.[5] The Hispanic communities are the largest in New Mexico, Texas and California as they make up 49%, 39% and 39% of the population in those states, respectively.[6] The next minority group that will be part of our data and analysis are African Americans, who are also reffered to Black Americans. They are the second largest minority group in America, behind only Hispanic Americans, making up 14% of the total population.[4] The U.S Census Bureau defines a Black American as any person who has origins stemming from any Black racial group of Africa as well as certain Afro-Carribbean countries such as Haiti or Jamaica.[7] The states most populated by the Black community are Mississippi, Georgia and Louisiana as the community makes up 47%, 38% and 33% of the total population in those states, respectively.[8] The final racial group that is in our dataset and that is going to be part of our analysis is Asian Americans. An Asian American is defined as anyone who has origins in East and Southeast Asia as well as the Indian subcontinent, according to the Census Bureau.[9] This includes countries such as China, Japan, India and Pakistan, to name a few. Asians are the smallest minority group in America, making up only 6% of the population and have the highest number of residents in California, New York and Texas.[10][11]
+
+We hypothesize that wealth inequality between White Americans and Americans that are part of the Black or Hispanic communities has increased throughout the years. That is, we predict that the values we will obtain from applying the 'difference-in-differences' method to compare White to Black household income and White to Hispanic househould income will both be positive. Similarily, we expect the value to be positive when we compare Asian household income to Black and Hispanic household income as well. However, in this case we are expecting a smaller value than what we get when we compare White households with Black or Hispanic households. That is, we expect to find that wealth inequality has increased over years between Asian and Black or Hispanic households, but not to the extent to which it has between White and Black or Hispanic households. Our hypothesis is based on a similar study conducted by the Federal Reserve Bank of St. Louis in 2020. They found that despite the steady increases in Black and Hispanic incomes over the years, the wealth gap between White and Black or Hispanic households is as significant as ever.[12]   
+
+# Data
+
+## Data Collection Process
+The data that will be utilizing in this report was found on Github's Tidy Tuesday page and was one of the datasets in their 2021 collection. The data itself was collected by the Urban Institute as well as the U.S Census Bureau and was last updated in 2020 to include data from 2019. Included in the dataset are 10 CSV files that contain data on the finances of various racial groups in The United States. This includes information regarding the incomes, student debts, retirement savings and overall wealth of thousands of American households throughout the span of several decades. As the data was collected in the form of several censuses through a prolonged period of time, it can be subjected to the typical biases and sampling errors that are commonly found in censuses. These include response bias, voluntary response bias and non-repsonse bias. In this case, response bias can occur when a household does not disclose its financial information such as income or income bracket correctly. Since the census might have not been anonymous, members of certain households might have not been comfortable providing their true income and income bracket and a result provided false information. This could lead to inaccurate income medians being calculated. Voluntary response bias occurs when certain people are more inclined to share information about a certain matter than others. In this situation, when asked to provide their household's income or income bracket, people part of a higher bracket would be more inclined to share than people in a lower bracket. This would lead to households around America appearing to have higher incomes than they really do. Finally, non-response bias occurs when people are unable or simply unwilling to participate in a survey or census. Although a large majority of households in America respond to censuses each time, there are certain people who do not have stable enough internet access or who live in inaccesbile parts of the country. Additionally, there are other households who simply refuse to respond to their censuses despite being legally obliged to.[13] Such behaviour can result in certain income brackets being underrepresented. Our data set of choice, `income_distribution.csv`, was manually read in using the `readr::read_csv` function and provided us with the data we are going to use for our analysis.
+
+## Data Summary
+The dataset that we will be using for our analysis, `income_distribution.csv`, contains 7 numerical variables and 2 categorical variables for a total of 9 variables. The data contains the financial information of households composed of various racial groups throughout the span of about 50 years. For each race, their is about 50 years worth of information on the median incomes, mean incomes, number of households of that race, etc. In the next section, we will continue on to cleaning the data and explaining some of the important variables that will be used in our analysis.
+
+```{r, include = FALSE}
+library(tidyverse)
+
+income_distribution <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-09/income_distribution.csv')
+
+income_distribution <- income_distribution %>% select(year, race, income_median, income_bracket)%>%
+                                               filter(!grepl('All Races', race))%>%
+                                               filter(!grepl('White Alone, Not Hispanic', race))%>%
+                                               filter(!grepl('Asian Alone or in Combination', race))%>%
+                                               filter(!grepl('Black Alone or in Combination', race))
+
+income_distribution <- income_distribution[seq(1, nrow(income_distribution), 9), ]
+income_distribution <- income_distribution %>% select(year, race, income_median)
+                                               
+white_dist <- income_distribution %>% filter(grepl('White Alone', race))
+black_dist <- income_distribution %>% filter(grepl('Black Alone', race))
+asian_dist <- income_distribution %>% filter(grepl('Asian Alone', race))
+hispanic_dist <- income_distribution[seq(140, nrow(income_distribution), 1), ]
+                                               
+```
+
+When the data was first read in, it contained 9 variables each with 2916 observations. The data was grouped by race, with  data for each race being ordered in descending order of time. Our first step in the cleaning process was to edit `income_distribution.csv` to only contain `year, race, number, income_median` and `income_bracket`, the only variables we needed to further clean and analyse the data. This was completed with the help of the `tidyverse` library. As our analysis would ultimately require the use of only `year, race and income_median` and `income_bracket` would be used to further clean the data, we were able to get rid of `income_med_moe, income_mean, income_mean_moe` and `income_distribution`. Since our analysis is attempting to investigate the wealth gap behaviours between strictly White, Black, Hispanic and Asian households, the next step in cleaning the data was to remove the households which contained combinations of races. Using the `filter` function from the `dplyr` library in correspondence with the base `grepl` function, the `race` values `All races, White Alone, Not Hispanic, Asian or in Combination` and `Black Alone or in Combination` were filtered out of the data, leaving `White Alone, Black Alone, Asian Alone` and `Hispanic (Any Race)`. After choosing our desired races, we moved on to simplfying our `income_median` variable. The `income_bracket` and `income_distribution` variables would provide us information on what percentage of households would fall into each income bracket for each race and year. Since there were 9 different income brackets, the `income_median` value for each race and year was repeated 9 times as the overall income median is not affected by income brackets. To make future analysis easier, we used the base `seq` funtion to give us the income median for each race in each year without the repeating values by taking every 9th `income_median` value. We then got rid of the `income_bracket` variable by once again using the `select` function in `tidyverse` to only include our three significant variables, `year, race` and `income_median`. Finally, the 4 races we would be using in our analysis were split into their own data sets using the `filter` and `grepl` functions once again. That means we put each race into a seperate data set along with every year and the income median for that year resulting in a total of 4 data sets each with 3 variables, `year, race` and `income_median`.
+
+## Key Variables
+
+In this section we will be explaining some of the variables that we used in the cleaning of our data, as well as the variables that we are going to use for our analysis.
+
+#### Independent Variables
+
+The variable `year` seperates each race into 40-50 sections where each section is a certain year of observations. The most recent year for every race is 2019, while the oldest year of observations varies from race to race. For example, data on `White Alone` and `Black Alone` households dates back to 1967 while data on `Asian Alone` households only goes back untill 1987. For Hispanic households, the earliest available data is from 1972. This variable is going to be essential in our difference-in-differences analysis as it will provide us with the information needed to compare income medians over time.
+
+The variable `race` is another crucial part of our future analysis. As the name suggests, this variable gives us information on the races of the people living in each of the types of households that were surveyed in the census. In total there were 7 different values for `race`, 4 that signified households that were composed of only one race, 2 that signified households that included people of different races and 1 that signified a specification of a certain race. The single-race values were `White Alone, Black Alone, Asian Alone` and `Hispanic (Any Race)` while the combination values included `Black Alone or in Combination` and `Asian Alone or in Combination`. `Black Alone or in Combination` represented households that contained only Black members as well as households that included certain members that were Black and certain members that were of another race. Similarily, `Asian Alone or in Combination` represented households that were composed either of purely Asians or Asians as well as people of other races. The `White Alone, not Hispanic` value represents households that were composed purely of White members that do not have origins in any of the Central or South America countries. In addition to these values, `All Races` is a race variable that represents all of the households in America for a given year.
+
+#### Dependent Variables
+
+`income_median` is a variable that gives us the median income of households for each race in each year. This variable is going to be the key to our analysis as it holds the values we are going to be comparing between races over time. The variable was calculated by taking the income of every household of a certain race in a certain year, listing them in ascending order and then taking the center value. This type of average provides a more accurate insight on the typical finanical situation of certain households in a certain year as it is not influenced by outliers, unlike the mean. When using the mean, a select few households that make significantly more than the typical household can greatly increase the yearly income average for that specific race, providing an inaccurate picture on the financial situations of typical American families.
+
+The variables `income_bracket` and `income_distribution` are two variables that worked in unison to provide additional information regarding the financial status of households of certain races in specific years. For each race and year, `income_bracket` would provide 9 different income brackets ranging from `Under $15,000` to `$200,000 and over`. To compliment these brackets, `income_distribution` would contain a decimal number for each income bracket to represent the percentage of surveyed households who were part of that income bracket. Therefore, all the `income_distribution` values for a specific race and a specific year add up to 100. These two variables show us how wealth distribution changed over the years for each race.
+
+
+## Numerical Summary 
+
+In this section we will take a look at some statistics regarding the median incomes of households in 2019 as well as 1987, as that is the earliest year for which we have data on all four of our desired races. 
+```{r, include=FALSE}
+recent_incomes <- white_dist %>% filter(grepl(2019, year))
+
+recent_incomes <- recent_incomes %>% add_row(black_dist %>% filter(grepl(2019, year)))%>%
+                                     add_row(asian_dist %>% filter(grepl(2019, year)))%>%
+                                     add_row(hispanic_dist %>% filter(grepl(2019, year)))
+
+earliest_incomes <- white_dist %>% filter(grepl(1987, year))
+
+earliest_incomes <- earliest_incomes %>% add_row(black_dist %>% filter(grepl(1987, year)))%>%
+                                         add_row(asian_dist %>% filter(grepl(1987, year)))%>%
+                                         add_row(hispanic_dist %>% filter(grepl(1987, year)))
+
+
+```
+
+#### Summary of 2019 Incomes
+
+```{r echo=FALSE}
+sum_table_recent <- summarise(recent_incomes, mean = mean(income_median), median = median(income_median), sd = sd(income_median), min = min(income_median), max = max(income_median))
+
+knitr::kable(sum_table_recent, "latex")
+
+```
+Looking at this summary of the incomes from 2019, we see that the mean income for White, Black, Asian and Hispanic households together was \$67,982 with a standard deviation of nearly \$23,000. Additionally, we see a maximum income of \$98,174 and a minimum income of \$45,438 which, after further inspection, we can say are the Asian and Black median incomes for 2019, respectively.
+
+#### Summary of 1987 Incomes
+
+```{r, echo = FALSE}
+sum_table_early <- summarise(earliest_incomes, mean = mean(income_median), median = median(income_median), sd = sd(income_median), min = min(income_median), max = max(income_median))
+
+knitr::kable(sum_table_early, "latex")
+```
+Looking at the summary above, we see that the mean income for White, Black, Asian and Hispanic households combined in 1987 was \$51,105 with a standard deviation of more than \$50,000. Furthermore, we see a maximum income of \$69,570 and a minimum income of \$33,833. Once again, the largest median income belonged to the Asian households while the smallest belonged to the Black households, with the median household income of Asian homes being twice as great as that of Black homes.
+
+From the two summaries above, we see that despite the mean income of households increasing by $16,000 from 1987 to 2019, The gap between certain races still remains large. Moreover, we see that the Black community still has the lowest household incomes on average while Asians have the largest average incomes, by far.
+
+## Data Visualization
+
+```{r, echo = FALSE}
+income_distribution <- income_distribution %>% filter(year > 1986) 
+
+ggplot(income_distribution, aes(x=year, y=income_median, group=race)) + 
+  geom_line(aes(color = race)) +
+  geom_point(aes(colour = race)) +
+  xlab("Year") +
+  ylab("Median Income") +
+  ggtitle("Median Incomes from 1987 to 2019")+
+  scale_y_continuous(labels = scales::comma) +
+  labs(color = "Race")  
+```
+**Figure 1.** A connected scatterplot that shows the income medians of White, Black, Asian and Hispanic households from 1987 to 2019.
+
+Looking at Figure 1 above we see the behaviour of the median incomes for the 4 races that we will be comparing in our analysis. One thing that stands out right away is the lack of intersection between lines. In 1987, we see that Asians had the highest median household incomes, followed by White, Hispanic and Black households. Suprisingly, this reamains the case for all 32 years of observations. All four of the races seemed to follow similar trends, experiencing increases and decreases in median income in the same years. For example, we can see that every race's median income dipped after 2000 although the Hispanic dip was not severe as the others. Additionally, we can see the effects of the 2008 financial crisis on all of the races. Every race experienced lowering incomes untill 2012, when median incomes then began increasing at a higher rate than ever. In 2019, we see that the ranking of the wealthiest races has stayed consistent. Asian households have the highest incomes by far, followed once again by White, Hispanic and Black households. When comparing the income gaps from 1978 to the gaps in 2019, we see that the gap between Asian and White households has increased significantly while the gap between White households and Hispanic or Black households has stayed fairly consistent. We will further investigate these wealth inequalities in the next section. 
+
+All analysis for this report was programmed using `R version 4.0.4`.
+
+
+# Methods
+As the goal of this report is to examine the extents to which wealth inequality has transformed in America, we will be using the 'difference-in-differences' method to examine the change in wealth gaps between several pairs of races over time. This will be accomplished by comparing the median income gap between races in 1987 and then again in 2019. Initially, we will calculate the income gap present in 2019 and then we will calculate that same gap in 1987. We will then subtract the 2019 gap from the 1987 gap to obtain a dollar amount that represents the change in the gap from 1987 to 2019. The first pairs of comparisons are going to be made using data from White, Hispanic and Black households. We are going to examine how the income gap between White and Hispanic households has changed and then we will do the same between White and Black households. In these two comparisons we are going to be treating the Hispanic and Black households as the treatment groups while the White households will be the non-treatment group. Following that, we will apply the same technique to analyze the changes in income gap between Asian households and households of the three other races: White, Hispanic and Black. In these comparisons, the Asian households will be the non-treatment while the White, Hispanic and Black households will be the treatment groups.
+
+## Assumptions
+Since we are running a 'difference-in-differences' analysis we have to ensure that we fufill the 'parallel trends' assumption. In this case, that means we have to ensure that the wealth gaps between our four chosen races stay consistent and have similar behaviours over time. Looking at Figure 1 in the 'Data' section, we can see that this is the case. Over the span of 32 years, every race was subjected to the same economic events which resulted in median incomes increasing and decreasing in similar time frames. This, in turn, caused the differences in incomes between races to stay fairly consistent. Now that we have satisfied the required assumption, we can move onto obtaining and analyzing our results.
+
+# Results 
+In this section we will be showcasing the results from our various 'difference-in-differences' analyses.
+\newline
+```{r, include = FALSE}
+
+#White vs Hispanic Households
+w_h_2019_diff <- recent_incomes$income_median[1] - recent_incomes$income_median[4]
+w_h_1987_diff <- earliest_incomes$income_median[1] - earliest_incomes$income_median[4]
+w_h_gap_change <- w_h_2019_diff - w_h_1987_diff
+
+#White vs Black Households
+w_b_2019_diff <- recent_incomes$income_median[1] - recent_incomes$income_median[2]
+w_b_1987_diff <- earliest_incomes$income_median[1] - earliest_incomes$income_median[2]
+w_b_gap_change <- w_b_2019_diff - w_b_1987_diff
+
+#Asian vs White Households
+a_w_2019_diff <- recent_incomes$income_median[3] - recent_incomes$income_median[1]
+a_w_1987_diff <- earliest_incomes$income_median[3] - earliest_incomes$income_median[1]
+a_w_gap_change <- a_w_2019_diff - a_w_1987_diff
+
+#Asian vs Hispanic Households
+a_h_2019_diff <- recent_incomes$income_median[3] - recent_incomes$income_median[4]
+a_h_1987_diff <- earliest_incomes$income_median[3] - earliest_incomes$income_median[4]
+a_h_gap_change <- a_h_2019_diff - a_h_1987_diff
+
+#Asian vs Black Households
+a_b_2019_diff <- recent_incomes$income_median[3] - recent_incomes$income_median[2]
+a_b_1987_diff <- earliest_incomes$income_median[3] - earliest_incomes$income_median[2]
+a_b_gap_change <- a_b_2019_diff - a_b_1987_diff
+```
+
+ 
+```{r, echo = FALSE}
+
+white_table <- tibble(Households = c('Change in Income Gap between White and Hispanic households', 'Change in Income Gap between White and Black households'), Income_Change_USD = c(w_h_gap_change, w_b_gap_change))
+
+knitr::kable(white_table, "latex")
+```
+**Table 1.** A table showing the changes in income gap between White and Hispanic households, as well as White and Black households.
+
+
+Looking at the table above we see two suprising results. When comparing the income gap between White and Hispanic households in 2019 and 1987, we see that the 'difference-in-differences' calculation resulted in a negative value. This signifies that the income gap between these two races has decreased. The difference between the median incomes of White and Hispanic households in 2019 is \$1,433 smaller than it was in 1987. On the other hand, the income gap between White and Black households was slightly greater in 2019 than it was in 1987. The difference between White and Black median incomes was \$1,322 greater in 2019 than it was 1987, a value that will seem quite insignificant after looking at Table 2. Overall, these results show us that the wealth gap transformations between White households and households of two minority groups are not significant as we initially thought they would be.
+
+\newpage
+```{r, echo=FALSE}
+asian_table <- tibble(Households = c('Change in Income Gap between Asian and White households', 'Change in Income Gap between Asian and Hispanic households', 'Change in Income Gap between Asian and Black households'), Income_Change_USD = c(a_w_gap_change, a_h_gap_change, a_b_gap_change))
+
+knitr::kable(asian_table, "latex")
+```
+**Table 2.** A table showing the changes in income gap between Asian and White households, Asian and Hispanic households and Asian and Black households.
+
+Similar to Table 1, Table 2 shows us some suprising results. The income gaps between Asian households and households of any one of our other three races grew by a sizable amount. The median income gap between Asian and White households was far larger in 2019 than it was in 1987, growing by \$15,677. The gap between Asian and Black households grew by an even larger amount with the difference between median incomes expanding by nearly \$17,000. The change in income gap was the lowest between Asian and Hispanic households as the gap only increased by \$14,234. This table shows us that from 1987 to 2019, Asian incomes did not just grow considerably more than those of other minority groups, but of the White American majority as well.
+
+
+# Conclusions
+This report began with our prediction that wealth inequality between White households and Hispanic or Black housholds woul have incresed drastically over the course of three decades. Furthermore, we hypothesized that the same could be said when comparing Asian households to households of any other race, but to a lesser extent. To test these hypotheses, we ran several 'difference-in-differences' analyses in which we calculated the median income gap between two races in 1987 and then in 2019 to determine whether the gap increased or decreased. These analyses involved comparing the incomes of White households with those of Hispanic and Black households and also included comparisons where incomes of Asian households were examined along side White, Hispanic and Black households. The results we received were quite far from our initial hypotheses. The income gap between White and Hispanic households decreased by about \$1,400, which is the opposite of what we predicted. Additionally, the income gap that was present between White and Black households in 1987 only grew by \$1,300 by 2019, a value that represents a small change in the scope of 32 years. Most suprising of all was the extreme expansion of all income gaps involving Asian households. For Asian households, the gap between White households grew by nearly \$16,000 while the gap between Hispanic households grew by about \$14,000. Lastly, the income gap between Asian and Black households grew by a staggering \$17,000. After looking at the results, it became apparent that our hypotheses were no where near being correct.
+
+These results seem to suggest that despite incomes increasing substantially for all, severe income inequalitites are still present between certain races in America. The Asian communities seem to be prospering in comparison to others as their already existent income gaps with other races soared to even greater heights. Perhaps the most interesting piece of knowledge that was obtained from this report was that the expansion of income gaps between White households and households of minorities such as the African Americans or Hispanics were not as extreme as many people think. Although the gaps are still significant, with the difference in median income between White and Black households being nearly \$27,000, time has not contributed greatly to their increase. Overall, it is clear that to this day your race is a major determining factor in your economic status when living in The United States.
+
+
+## Weaknesses
+A potential weakness for this analysis comes from the census data itself. The U.S Census Bureau seems to have flipping definitions of the `race` variable. This is apparent when you notice the `race` value of `Hispanic (Any Race)`. This definition seems to imply that 'Hispanic' is not a race, but rather a term used to describe somebody from Central or Southern America. In our case, this is quite strange as this value appears as part of a variable named `race` but does not seem to be reffering to race. This can have negative effects on our data collection, and in turn, our analysis as it makes it more difficult to decide which values of the `race` variable we should consider as 'Black' households and which ones as 'Hispanic' households. For example, how can we discern a household that is considered to `Black Alone` from `Hispanic (Any Race)`? A household composed purely of members part of the Black race can be considered for either one of these values if they are Hispanic. A fully Black, Hispanic household is both `Black Alone` and `Hispanic (Any race). Such unusual situations can result in certain households getting confused and not recording their race correctly, leading to their income being grouped incorrectly. This would then mean that the census in not receiving the best possible representation of their population.
+
+Another topic that is worth noting, that can also serve as a reminder to the reader, is the difference between income and wealth. Income refers to the amount of money that someone receives on a regular basis, either as form of payment due to a job or a return on investment. In this report, we were working with yearly incomes for households as a whole. Wealth, on the other hand, refers to a person's or household's savings. A household's wealth can depend on several factors including, location of residence, size of household, number of children and health of the members. Living in larger cities is often more expensive that living in more rural areas and the more people there are in a household, the more money is spent on necessities. There are many households in America that have high yearly incomes but are not very wealthy. On the other hand, there are also households that do not bring in as much yearly but have higher amounts of collected wealth. 
+
+## Next Steps
+A potential research oppurtunity that would compliment this report could involve the analysis of wealth between households of different races. Such analysis could determine the importance of race, location, number of children, health of members, etc. on a household's ability to collect wealth. Additionally, it could look at the changes in wealth between households of different races over time to determine whether certain races are able to increase their wealth more effectively than others. This type of analysis could perhaps give us a better understanding into why it is so difficult for minority groups in America to close the wealth gaps that have been present for so long.
+
+## Discussion
+
+Altogether, this report provides readers with a solid history on the financial situations of households all across the United States. By examining the behaviours of several pairs of income gaps between different racial groups in America, we were able to highlight the severe inequalites present within the country. Although the income gaps between certain races have not undergone the expansions that many thought they have, they are still existing and are more felt than ever. In a world were the cost of living is increasing exponentially such inequalities are sure to become increasingly noticeable and will continue to increase tensions between races. It is this report's hope to inform people on the extent to which America is becoming divided and to encourage all readers to devote themselves to equality.
+
+
+# Bibliography
+1. Board of Governors of the Federal Reserve System. The Fed - Distribution: Distribution of Household Wealth in the U.S. since 1989. (2021, March 19). [https://www.federalreserve.gov/releases/z1/dataviz/dfa/distribute/chart/#quarter:0;series:Net%20worth;demographic:networth;population:1,3,5,7;units:levels;range:2005.2,2020.2.](https://www.federalreserve.gov/releases/z1/dataviz/dfa/distribute/chart/#quarter:0;series:Net%20worth;demographic:networth;population:1,3,5,7;units:levels;range:2005.2,2020.2.)
+
+2. Bureau, U. S. C. (n.d.). Data Profiles. 2018 Data Profiles | American Community Survey | US Census Bureau. [https://www.census.gov/acs/www/data/data-tables-and-tools/data-profiles/2018/.](https://www.census.gov/acs/www/data/data-tables-and-tools/data-profiles/2018/.)
+
+3. R.Humes, K. (2011, March 1). Overview of Race and Hispanic Origin: 2010. U.S. Census Bureau. [https://www.census.gov/prod/cen2010/briefs/c2010br-02.pdf.](https://www.census.gov/prod/cen2010/briefs/c2010br-02.pdf.)
+
+4. ACS Demographic and Housing Estimates. Explore Census Data. (n.d.). [https://data.census.gov/cedsci/table?q=population&amp;g=0100000US&amp;tid=ACSDP1Y2019.DP05&amp;hidePreview=true.](https://data.census.gov/cedsci/table?q=population&amp;g=0100000US&amp;tid=ACSDP1Y2019.DP05&amp;hidePreview=true.) 
+
+5. Bureau, U. S. C. (2020, October 16). About the Hispanic Population and it's Origin. The United States Census Bureau. [https://www.census.gov/topics/population/hispanic-origin/about.html.](https://www.census.gov/topics/population/hispanic-origin/about.html.) 
+
+6. Research Department, S. (2021, January 20). Percentage of Hispanic population in the U.S. by state 2019. Statista. [https://www.statista.com/statistics/259865/percentage-of-hispanic-population-in-the-us-by-state/.](https://www.statista.com/statistics/259865/percentage-of-hispanic-population-in-the-us-by-state/.)
+
+7. Bureau, U. S. C. (2011, September 1). The Black Population: 2010. U.S. Census Bureau. [https://www.census.gov/prod/cen2010/briefs/c2010br-06.pdf.](https://www.census.gov/prod/cen2010/briefs/c2010br-06.pdf.)
+
+8. Explore Census Data. (n.d.). [https://data.census.gov/cedsci/map?q=population&amp;g=0400000US01%2C02%2C04%2C05%2C06%2C08%2C09%2C10%2C11%2C12%2C13%2C15%2C16%2C17%2C18%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C28%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C44%2C45%2C46%2C47%2C48%2C49%2C50%2C51%2C53%2C54%2C55%2C56&amp;tid=ACSDP1Y2019.DP05&amp;hidePreview=false&amp;vintage=2019&amp;layer=VT_2019_040_00_PP_D1&amp;cid=DP05_0065PE&amp;palette=Teal&amp;classification=Natural+Breaks&amp;mode=thematic.](https://data.census.gov/cedsci/map?q=population&amp;g=0400000US01%2C02%2C04%2C05%2C06%2C08%2C09%2C10%2C11%2C12%2C13%2C15%2C16%2C17%2C18%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C28%2C29%2C30%2C31%2C32%2C33%2C34%2C35%2C36%2C37%2C38%2C39%2C40%2C41%2C42%2C44%2C45%2C46%2C47%2C48%2C49%2C50%2C51%2C53%2C54%2C55%2C56&amp;tid=ACSDP1Y2019.DP05&amp;hidePreview=false&amp;vintage=2019&amp;layer=VT_2019_040_00_PP_D1&amp;cid=DP05_0065PE&amp;palette=Teal&amp;classification=Natural+Breaks&amp;mode=thematic.)
+
+9. Kambhampaty, A. P. (2020, March 12). Before the Census, a Question-Who Counts as Asian American? Time. [https://time.com/5800209/asian-american-census/#:~:text=The%20Census%20Bureau%20defines%20a,%2C%20Thailand%2C%20and%20Vietnam.%E2%80%9D.](https://time.com/5800209/asian-american-census/#:~:text=The%20Census%20Bureau%20defines%20a,%2C%20Thailand%2C%20and%20Vietnam.%E2%80%9D.) 
+
+10. Bureau, U. S. C. (2020, April 30). Asian and Paciﬁc Islander Population in the United States. The United States Census Bureau. [https://www.census.gov/library/visualizations/2020/demo/aian-population.html.](https://www.census.gov/library/visualizations/2020/demo/aian-population.html.) 
+
+11. Office of Minority Health. Asian American - The Office of Minority Health. (n.d.). [https://minorityhealth.hhs.gov/omh/browse.aspx?lvl=3&amp;lvlid=63#:~:text=Asian%20Americans%20account%20for%205.7,%2C%20Virginia%2C%20Hawaii%2C%20Massachusetts.](Office of Minority Health. Asian American - The Office of Minority Health. (n.d.). https://minorityhealth.hhs.gov/omh/browse.aspx?lvl=3&amp;lvlid=63#:~:text=Asian%20Americans%20account%20for%205.7,%2C%20Virginia%2C%20Hawaii%2C%20Massachusetts.) 
+
+12. Kent, A. H., &amp; Ricketts, L. R. (2021, May 26). Wealth Inequality in America over Time: Key Statistics: St. Louis Fed. Wealth Inequality in America over Time: Key Statistics | St. Louis Fed. [https://www.stlouisfed.org/open-vault/2020/december/has-wealth-inequality-changed-over-time-key-statistics.](https://www.stlouisfed.org/open-vault/2020/december/has-wealth-inequality-changed-over-time-key-statistics.) 
+
+13. Whitbourne, K. (2000, April 1). What Happens If I Don't Fill Out My Census Form? HowStuffWorks. [https://people.howstuffworks.com/question345.html.](https://people.howstuffworks.com/question345.htm.)
+
+14. Robinson, N. (2021, April 8). Filter, Piping, and GREPL Using R DPLYR - An Intro. Filter, Piping, and GREPL Using R DPLYR - An Intro | NSF NEON | Open Data to Understand our Ecosystems. [https://www.neonscience.org/resources/learning-hub/tutorials/grepl-filter-piping-dplyr-r.](https://www.neonscience.org/resources/learning-hub/tutorials/grepl-filter-piping-dplyr-r.) 
+
+15. Holtz, Y. (n.d.). Connected scatterplot with R and ggplot2. – the R Graph Gallery. [https://www.r-graph-gallery.com/connected_scatterplot_ggplot2.html.](https://www.r-graph-gallery.com/connected_scatterplot_ggplot2.html.)
+
+16. Grolemund, G. (2014, July 16) *Introduction to R Markdown*. RStudio. [https://rmarkdown.rstudio.com/articles_intro.html](https://rmarkdown.rstudio.com/articles_intro.html). (Last Accessed: January 15, 2021) 
+
+17. Dekking, F. M., et al. (2005) *A Modern Introduction to Probability and Statistics: Understanding why and how.* Springer Science & Business Media.
+
+18.  Allaire, J.J., et. el. *References: Introduction to R Markdown*. RStudio. [https://rmarkdown.rstudio.com/docs/](https://rmarkdown.rstudio.com/docs/). (Last Accessed: January 15, 2021) 
+
+\newpage
+
+# Appendix
+
+## Supplemetary Data
+
+```{r, echo=FALSE}
+knitr::kable(earliest_incomes, "latex")
+```
+**Table 3.** A table that shows the median incomes for White, Hispanic, Black and Asian households in 1987.
+\newline
+
+```{r, echo=FALSE}
+knitr::kable(recent_incomes, "latex")
+```
+**Table 4.** A table that shows the median incomes for White, Hispanic, Black and Asian households in 2019.
+
+
+
+
+
